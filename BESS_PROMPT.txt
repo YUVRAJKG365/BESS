@@ -1,0 +1,1429 @@
+You are a senior Python + Streamlit application architect and UI/UX engineer.
+
+I need you to build a complete production-quality Streamlit frontend for an existing Battery Energy Storage System (BESS) State-of-Health (SOH) degradation and forecasting project.
+
+IMPORTANT:
+This is NOT a request to invent a new BESS degradation model.
+
+There is already an existing Python/Jupyter implementation called:
+
+BESS_Model_v11_Annotated_Notebook(1).ipynb
+
+You must treat that implementation as the reference/baseline for the forecasting methodology, equations, parameter calibration, scenario generation, diagnostics, uncertainty analysis, and outputs.
+
+The Streamlit application must wrap/orchestrate that existing methodology and expose it through a professional interactive UI.
+
+============================================================
+1. PROJECT OBJECTIVE
+============================================================
+
+Build a Streamlit-based web application where a user can:
+
+1. Upload multiple BESS-related datasets/files.
+2. Upload/select the OEM baseline file.
+3. Preview uploaded datasets.
+4. Analyze and visualize the spread/distribution of uploaded field data.
+5. Validate/map the uploaded data against the expected model inputs.
+6. Display OEM baseline visualization and data preview.
+7. Select forecasting model type:
+      - Physics-Based
+      - PINN-Based
+8. Run forecasting using the uploaded data.
+9. Generate best-case, middle-case and worst-case forecasts based on the actual uploaded operational data.
+10. Analyze how temperature, charging, discharging, SOC, DoD, EFC/cycle intensity and other available operating variables affect degradation.
+11. Display model performance metrics.
+12. Compare Physics-Based and PINN-Based model forecasts.
+13. Display final best/middle/worst operating scenarios with detailed operating information.
+14. Provide downloadable results/reports.
+
+The final application should feel like a professional BESS degradation analytics platform, not like a raw notebook converted into Streamlit.
+
+============================================================
+2. REFERENCE IMPLEMENTATION
+============================================================
+
+The existing V11 notebook contains the actual methodology.
+
+DO NOT silently change its mathematical methodology.
+
+The current model includes concepts such as:
+
+- Calendar aging
+- Cycle aging
+- Arrhenius temperature dependence
+- SOC stress
+- DoD stress
+- EFC/day
+- C-rate stress
+- High-temperature Tmax stress
+- Low-temperature Tmin/cold-cycle stress
+- Power-law time dependence
+- Power-law throughput dependence
+- SOH step-event detection
+- Step-event artifact/physical classification
+- Smooth field-data target
+- OEM daily baseline
+- Two-stage parameter calibration
+- Field-data fitting
+- Scenario forecasting
+- Temperature forecasting
+- Peaks-over-threshold / extreme temperature handling
+- Parameter ensemble / uncertainty analysis
+- Scenario sensitivity analysis
+- Optional ML residual diagnostic
+
+The V11 implementation currently produces outputs including:
+
+- Raw observed SOH
+- Smooth target SOH
+- Model smooth SOH
+- RMSE against raw observations
+- RMSE against smooth target
+- RMSE against OEM daily baseline
+- Calendar degradation loss
+- Cycle degradation loss
+- Total modeled loss
+- EOL prediction
+- Scenario EOL
+- Parameter ensemble EOL
+- SOH uncertainty bands
+- Diagnostics
+- Scenario comparisons
+- Excel audit workbook
+
+Preserve these concepts.
+
+============================================================
+3. VERY IMPORTANT ARCHITECTURAL REQUIREMENT
+============================================================
+
+Separate the project into:
+
+A. FRONTEND / UI
+B. DATA INGESTION
+C. FORECASTING ENGINE
+D. PINN ENGINE
+E. VISUALIZATION
+F. REPORT GENERATION
+G. STATE MANAGEMENT
+
+Do NOT put all code inside app.py.
+
+Recommended structure:
+
+project/
+│
+├── app.py
+│
+├── pages/
+│   ├── 01_data_upload.py
+│   ├── 02_data_exploration.py
+│   ├── 03_oem_baseline.py
+│   ├── 04_model_selection.py
+│   ├── 05_forecasting.py
+│   ├── 06_scenario_analysis.py
+│   ├── 07_model_comparison.py
+│   └── 08_final_report.py
+│
+├── components/
+│   ├── sidebar.py
+│   ├── cards.py
+│   ├── charts.py
+│   ├── tables.py
+│   ├── upload.py
+│   ├── progress.py
+│   └── scenario_cards.py
+│
+├── backend/
+│   ├── data_loader.py
+│   ├── data_validator.py
+│   ├── data_mapper.py
+│   ├── oem_processor.py
+│   ├── physics_model.py
+│   ├── pinn_model.py
+│   ├── calibration.py
+│   ├── forecasting.py
+│   ├── scenarios.py
+│   ├── uncertainty.py
+│   ├── diagnostics.py
+│   └── report_generator.py
+│
+├── utils/
+│   ├── session_state.py
+│   ├── formatting.py
+│   ├── constants.py
+│   └── helpers.py
+│
+├── outputs/
+│
+├── data/
+│
+├── requirements.txt
+│
+└── README.md
+
+If the existing notebook already contains reusable functions, extract/import those functions instead of duplicating the logic.
+
+============================================================
+4. MULTI-FILE UPLOAD WORKFLOW
+============================================================
+
+The application must support MULTIPLE FIELD DATA FILES.
+
+The expected workflow is:
+
+Step 1:
+User uploads multiple field-data Excel/CSV files.
+
+Example files may include:
+
+- Field_Data_ModelReady1.xlsx
+- Field_Data_ModelReady2.xlsx
+- Field_Data_ModelReady_best_case_Bikaner.xlsx
+- Field_Data_ModelReady_middle_case_Bikaner_Barmer.xlsx
+- Field_Data_ModelReady_worst_case_Bikaner_Barmer.xlsx
+
+These names are examples only.
+
+Do NOT hard-code these filenames.
+
+The application must work with arbitrary uploaded filenames as long as their columns can be mapped to the model requirements.
+
+Step 2:
+For every uploaded file:
+
+- show filename
+- file type
+- number of rows
+- number of columns
+- date range
+- available variables
+- missing values
+- duplicate rows
+- basic statistics
+- detected SOH column
+- detected temperature columns
+- detected SOC column
+- detected DoD column
+- detected charge/discharge information
+- detected cycle/EFC information
+
+Step 3:
+Provide a consolidated view of all uploaded datasets.
+
+============================================================
+5. DATA VALIDATION
+============================================================
+
+Before forecasting, validate each dataset.
+
+Required validation categories:
+
+A. File validation
+B. Schema validation
+C. Date/time validation
+D. Numeric validation
+E. Missing-value validation
+F. Duplicate validation
+G. Physical plausibility validation
+H. Model compatibility validation
+
+Display:
+
+✓ Valid
+⚠ Warning
+✕ Error
+
+Do not run the forecasting engine if required inputs are missing.
+
+If a variable is missing but can be derived from available data, calculate it using the same logic as the backend/reference notebook.
+
+============================================================
+6. DATA COLUMN MAPPING
+============================================================
+
+Do NOT assume that every uploaded Excel file uses exactly the same column names.
+
+Create an intelligent/manual column mapping interface.
+
+Example:
+
+Uploaded column:
+"Battery SOH (%)"
+
+maps to:
+
+Model variable:
+SOH_pct
+
+Similarly:
+
+Temperature
+→ temperature variable
+
+SOC
+→ SOC_pct
+
+Depth of Discharge
+→ Avg_DoD_pct
+
+Cycles/day
+→ Cycles_per_day
+
+Energy throughput
+→ EFC_per_day
+
+Charge duration
+→ Charge_Duration_hr
+
+Discharge duration
+→ Discharge_Duration_hr
+
+etc.
+
+Show a mapping table:
+
+| Uploaded Column | Model Variable | Status |
+
+Allow the user to modify mappings manually.
+
+Save mappings in Streamlit session state.
+
+============================================================
+7. DATA SPREAD VISUALIZATION
+============================================================
+
+Immediately after successful upload and validation, display data exploration.
+
+This corresponds to the workflow requirement:
+
+"First show the data spread visualization of uploaded files."
+
+Provide:
+
+- SOH over time
+- Temperature over time
+- SOC distribution
+- DoD distribution
+- EFC/day distribution
+- Cycles/day distribution
+- charge duration
+- discharge duration
+- available additional operating variables
+
+Charts should support:
+
+- Plotly
+- zoom
+- hover
+- legend
+- download image
+
+For multiple datasets allow:
+
+- individual dataset view
+- combined view
+- overlay comparison
+
+Use professional engineering/data-science visualizations.
+
+============================================================
+8. OEM BASELINE
+============================================================
+
+Provide a dedicated OEM Baseline section.
+
+The user should upload/select the OEM baseline file separately.
+
+Show:
+
+- OEM data preview
+- OEM SOH curve
+- OEM time axis
+- OEM degradation trajectory
+- important baseline statistics
+
+Then display the OEM baseline alongside the field SOH data.
+
+Main visualization:
+
+Field SOH vs OEM baseline
+
+with clear legends.
+
+The OEM baseline must be passed into the calibration/forecasting engine according to the V11 methodology.
+
+============================================================
+9. MODEL SELECTION
+============================================================
+
+Before forecasting, provide a prominent model selection interface.
+
+Two choices:
+
+[ Physics-Based Model ]
+
+[ PINN-Based Model ]
+
+Default:
+
+Physics-Based Model
+
+Do NOT execute both models when the user selects only one unless required for comparison.
+
+However, the application should support running both later from the Model Comparison section.
+
+Provide a brief explanation:
+
+Physics-Based:
+Uses the semi-empirical degradation formulation and calibrated physical stress relationships from V11.
+
+PINN-Based:
+Uses a Physics-Informed Neural Network approach that incorporates physical constraints into the learning process.
+
+============================================================
+10. PHYSICS-BASED MODEL
+============================================================
+
+The Physics-Based implementation must preserve the V11 logic.
+
+Core degradation components:
+
+Calendar aging:
+
+ΔSOH_cal
+
+Cycle aging:
+
+ΔSOH_cyc
+
+Total:
+
+SOH = SOH0 - cumulative(calendar loss + cycle loss)
+
+The implementation must support the calibrated parameters including concepts such as:
+
+A_cal
+A_cyc
+Ea_cal
+Ea_cyc
+alpha
+beta
+k_SOC_high
+k_SOC_reward
+k_SOC_low
+gamma_DoD
+k_C
+k_Tmax
+k_Tmin
+
+Do not invent alternative equations unless explicitly required.
+
+Use the existing notebook implementation as the source of truth.
+
+============================================================
+11. CALIBRATION
+============================================================
+
+Expose calibration progress in the UI.
+
+Show:
+
+1. Data preparation
+2. SOH step-event detection
+3. Smooth target generation
+4. OEM baseline preparation
+5. Stage-1 calibration
+6. Stage-2 calibration
+7. Model validation
+
+After calibration display:
+
+Parameter | Value | Lower | Upper | Status | Meaning
+
+Include warnings when a parameter reaches its bound.
+
+For example:
+
+AT LOWER
+
+should be displayed clearly.
+
+Do not hide calibration warnings.
+
+============================================================
+12. FORECASTING
+============================================================
+
+After calibration, allow the user to click:
+
+"Run Forecast"
+
+Display a progress indicator.
+
+Forecast should include:
+
+- historical field data
+- calibrated model fit
+- future forecast
+- OEM baseline
+- EOL threshold
+- predicted EOL
+
+The EOL threshold from the V11 model is:
+
+65% SOH
+
+Clearly show:
+
+Predicted EOL
+Years to EOL
+EOL date
+SOH at forecast horizon
+
+============================================================
+13. BEST / MIDDLE / WORST CASE
+============================================================
+
+This is a major requirement.
+
+The application must generate/display:
+
+BEST CASE
+MIDDLE CASE
+WORST CASE
+
+These cases must be derived from the uploaded field data and its operating conditions.
+
+Do NOT simply rename arbitrary scenario outputs.
+
+Use actual observed distributions/quantiles where supported by the backend methodology.
+
+Relevant factors include:
+
+- EFC/day
+- DoD
+- SOC
+- temperature
+- Tmax
+- Tmin
+- charge duration
+- discharge duration
+- cycling intensity
+- other available stress variables
+
+For example:
+
+Best case:
+
+lower degradation stress
+
+Middle case:
+
+representative/median field operating condition
+
+Worst case:
+
+higher degradation stress
+
+The exact scenario-generation logic must remain consistent with the forecasting engine.
+
+============================================================
+14. FINAL CASE CARDS
+============================================================
+
+Create three large cards:
+
+BEST CASE
+
+Predicted EOL:
+XX years
+
+Final SOH:
+XX %
+
+Avg EFC/day:
+XX
+
+Avg DoD:
+XX %
+
+Avg SOC:
+XX %
+
+Mean Temperature:
+XX °C
+
+Max Temperature:
+XX °C
+
+Cycle intensity:
+XX
+
+--------------------------------
+
+MIDDLE CASE
+
+same information
+
+--------------------------------
+
+WORST CASE
+
+same information
+
+Use clear visual hierarchy.
+
+============================================================
+15. SCENARIO VISUALIZATION
+============================================================
+
+Create:
+
+A. SOH trajectory comparison
+
+Best vs Middle vs Worst
+
+B. EOL comparison
+
+Bar chart:
+
+Best | Middle | Worst
+
+C. Stress comparison
+
+Temperature
+SOC
+DoD
+EFC/day
+C-rate
+
+D. Scenario table
+
+Scenario | EFC/day | SOC | DoD | Temp | EOL | Final SOH
+
+============================================================
+16. OPERATING CONDITION ANALYSIS
+============================================================
+
+The user specifically wants forecasting outcomes based on:
+
+- Temperature
+- Charging
+- Discharging
+- cycling
+- SOC
+- DoD
+- other variables available in the dataset
+
+Create a section:
+
+"Operating Condition Impact"
+
+Display relationships such as:
+
+Temperature vs SOH degradation
+
+SOC vs degradation
+
+DoD vs degradation
+
+EFC/day vs degradation
+
+Charge duration vs degradation
+
+Discharge duration vs degradation
+
+Where statistically/physically meaningful, show:
+
+- correlation
+- trend
+- contribution/stress factor
+- degradation impact
+
+Do NOT claim causal relationships from simple correlation alone.
+
+Use wording such as:
+
+"Observed association"
+
+when appropriate.
+
+============================================================
+17. MODEL PERFORMANCE
+============================================================
+
+Create a dedicated Model Performance section.
+
+For each model show:
+
+RMSE
+MAE
+R² where meaningful
+MAPE where meaningful
+EOL error where ground truth is available
+Final SOH error
+Calibration error
+
+For Physics-Based model also show V11-specific metrics:
+
+RMSE vs raw observed
+RMSE vs smooth target
+RMSE vs OEM daily baseline
+calendar loss
+cycle loss
+total modeled loss
+observed loss
+
+============================================================
+18. PINN MODEL
+============================================================
+
+Implement the PINN model as a separate backend module.
+
+Do not mix PINN code into the Physics-Based implementation.
+
+The PINN should accept relevant operating variables and use the physical degradation relationships as constraints/loss components.
+
+Architecture should be modular so that the PINN can later be improved without changing the Streamlit UI.
+
+Potential conceptual loss structure:
+
+Total PINN Loss =
+Data Loss
++
+Physics Loss
++
+Boundary/Constraint Loss
+
+The exact PINN formulation should be clearly documented in the code.
+
+Do not falsely claim the PINN is scientifically validated merely because it trains successfully.
+
+============================================================
+19. MODEL COMPARISON
+============================================================
+
+At the end, provide:
+
+"Compare Models"
+
+Compare:
+
+Physics-Based
+vs
+PINN-Based
+
+Show:
+
+- SOH curves
+- forecast curves
+- EOL prediction
+- RMSE
+- MAE
+- R²
+- final SOH
+- calibration performance
+- uncertainty if available
+- computational time
+
+Main comparison chart:
+
+Historical SOH
++ Physics forecast
++ PINN forecast
++ OEM baseline
++ EOL threshold
+
+Create a summary table.
+
+Example:
+
+| Metric | Physics | PINN |
+|--------|---------|------|
+| RMSE | | |
+| MAE | | |
+| R² | | |
+| EOL | | |
+| Final SOH | | |
+
+Then provide an interpretation section.
+
+============================================================
+20. UNCERTAINTY ANALYSIS
+============================================================
+
+Expose the V11 parameter ensemble and scenario uncertainty.
+
+Clearly distinguish:
+
+Scenario uncertainty
+
+from
+
+Parameter uncertainty.
+
+Do NOT label the parameter ensemble as a formal statistical confidence interval.
+
+Display:
+
+P5
+P10
+P50
+P90
+P95
+
+for EOL where available.
+
+Display SOH uncertainty bands.
+
+============================================================
+21. DIAGNOSTICS
+============================================================
+
+Provide an expandable "Technical Diagnostics" section.
+
+Include:
+
+- calibration diagnostics
+- residual plots
+- SOH step events
+- parameter bounds
+- stress distributions
+- model warnings
+- data-quality warnings
+- scenario diagnostics
+- ML residual diagnostic if enabled
+
+The user should be able to inspect the technical details but the main dashboard should remain understandable.
+
+============================================================
+22. FINAL DASHBOARD
+============================================================
+
+The final dashboard should summarize the complete analysis.
+
+Header:
+
+BESS SOH FORECASTING & DEGRADATION ANALYTICS
+
+Top KPI cards:
+
+Current SOH
+Predicted EOL
+Years to EOL
+OEM Baseline
+Selected Model
+
+Then:
+
+SOH Forecast Chart
+
+Then:
+
+Best / Middle / Worst Case
+
+Then:
+
+Operating Condition Summary
+
+Then:
+
+Model Performance
+
+Then:
+
+Model Comparison
+
+Then:
+
+Technical Diagnostics
+
+============================================================
+23. STREAMLIT NAVIGATION
+============================================================
+
+Use either:
+
+Streamlit multipage navigation
+
+OR
+
+a clean sidebar step workflow.
+
+Preferred workflow:
+
+1. Project / File Upload
+2. Data Validation
+3. Data Exploration
+4. OEM Baseline
+5. Model Selection
+6. Calibration
+7. Forecast
+8. Scenario Analysis
+9. Model Comparison
+10. Final Report
+
+The sidebar should indicate completion:
+
+✓ Upload
+✓ Validation
+✓ Exploration
+✓ OEM
+→ Model Selection
+○ Forecast
+○ Comparison
+
+Do not allow later stages to run if required earlier stages have failed.
+
+============================================================
+24. SESSION STATE
+============================================================
+
+Use st.session_state properly.
+
+Persist:
+
+uploaded datasets
+dataset metadata
+column mappings
+OEM data
+validated data
+calibration parameters
+selected model
+forecast results
+scenario results
+comparison results
+metrics
+plots/dataframes required for report generation
+
+Do not repeatedly recalculate expensive models unnecessarily.
+
+Use st.cache_data / st.cache_resource appropriately.
+
+============================================================
+25. ERROR HANDLING
+============================================================
+
+The application must never crash because of a malformed Excel file.
+
+Handle:
+
+- invalid Excel
+- empty sheet
+- missing required columns
+- invalid dates
+- NaN
+- infinity
+- incompatible data types
+- insufficient observations
+- calibration failure
+- PINN training failure
+- forecast failure
+
+Show user-friendly error messages.
+
+Example:
+
+"Forecast cannot be executed because the uploaded field dataset does not contain a valid SOH time series."
+
+Also provide technical details inside an expandable error section.
+
+============================================================
+26. FILE FORMAT SUPPORT
+============================================================
+
+Support at minimum:
+
+.xlsx
+.xls
+.csv
+
+For Excel:
+
+Allow sheet selection when multiple sheets exist.
+
+Display selected sheet preview.
+
+============================================================
+27. DOWNLOADABLE OUTPUTS
+============================================================
+
+Provide buttons for:
+
+Download processed field data
+Download forecast CSV
+Download scenario results CSV
+Download model comparison CSV
+Download calibration parameters
+Download complete Excel report
+Download plots
+Download complete analysis package if practical
+
+The Excel report should follow the structure of the V11 output where applicable.
+
+============================================================
+28. REPORT GENERATION
+============================================================
+
+Generate a final professional report containing:
+
+1. Project information
+2. Uploaded datasets
+3. Data quality
+4. Dataset statistics
+5. OEM baseline
+6. Selected model
+7. Calibration parameters
+8. Historical fit
+9. Forecast
+10. Best case
+11. Middle case
+12. Worst case
+13. Operating-condition analysis
+14. Model performance
+15. Physics vs PINN comparison
+16. Uncertainty
+17. EOL prediction
+18. Assumptions
+19. Warnings
+20. Technical notes
+
+============================================================
+29. UI/UX DESIGN
+============================================================
+
+Use a professional engineering analytics interface.
+
+Avoid a generic Streamlit appearance.
+
+Design principles:
+
+- clean
+- modern
+- technical
+- readable
+- responsive
+- minimal clutter
+- strong hierarchy
+- consistent spacing
+- professional charts
+- meaningful KPI cards
+
+Use Plotly for interactive graphs.
+
+Use st.tabs(), st.expander(), st.metric(), st.dataframe(), progress indicators and status messages where appropriate.
+
+Do not overuse animations.
+
+============================================================
+30. COLOR/STATUS SEMANTICS
+============================================================
+
+Use consistent semantic status:
+
+Green:
+healthy / valid / lower degradation
+
+Yellow:
+warning / moderate degradation
+
+Red:
+critical / worst-case / EOL proximity
+
+However, do not rely solely on color.
+
+Always include text labels.
+
+============================================================
+31. IMPORTANT DATASET SEQUENCE
+============================================================
+
+The application must support the actual workflow of uploading multiple datasets sequentially.
+
+The upload sequence should conceptually be:
+
+FIELD DATA FILE(S)
+        ↓
+DATA VALIDATION
+        ↓
+DATA SPREAD / EXPLORATION
+        ↓
+OEM BASELINE
+        ↓
+MODEL SELECTION
+        ↓
+CALIBRATION
+        ↓
+FORECAST
+        ↓
+BEST / MIDDLE / WORST CASE
+        ↓
+OPERATING CONDITION ANALYSIS
+        ↓
+PHYSICS / PINN COMPARISON
+        ↓
+FINAL REPORT
+
+Do not make the user upload the same data again at every step.
+
+============================================================
+32. DO NOT HARDCODE RESULTS
+============================================================
+
+This is extremely important.
+
+Do NOT hardcode:
+
+- EOL
+- SOH
+- RMSE
+- best case
+- worst case
+- temperature
+- scenario results
+- model metrics
+- calibration parameters
+
+Everything displayed must be dynamically calculated from the uploaded datasets and backend model.
+
+============================================================
+33. BACKEND INTEGRATION
+============================================================
+
+First inspect the existing repository and locate:
+
+- BESS_Model_v11_Annotated_Notebook(1).ipynb
+- any existing Python modules
+- existing data-processing functions
+- existing calibration functions
+- existing forecasting functions
+- existing plotting functions
+- existing Excel export functions
+
+Reuse existing functions whenever possible.
+
+If functions exist only inside the notebook:
+
+extract them into Python modules carefully.
+
+Do not alter their mathematical behavior during extraction.
+
+Create wrappers where necessary.
+
+Example:
+
+run_physics_forecast(
+    field_data,
+    oem_data,
+    config
+)
+
+should return a structured result:
+
+{
+    "historical_fit": ...,
+    "forecast": ...,
+    "parameters": ...,
+    "metrics": ...,
+    "scenarios": ...,
+    "uncertainty": ...,
+    "diagnostics": ...,
+    "eol": ...
+}
+
+============================================================
+34. RESULT CONTRACT
+============================================================
+
+Create a consistent result object for both models.
+
+Example:
+
+ModelResult
+
+- model_name
+- historical_predictions
+- forecast_predictions
+- dates
+- eol_date
+- eol_year
+- final_soh
+- metrics
+- parameters
+- scenarios
+- uncertainty
+- diagnostics
+- warnings
+- runtime
+
+This allows the UI to compare Physics and PINN models without knowing their internal implementation.
+
+============================================================
+35. BEST/MIDDLE/WORST DATA REPRESENTATION
+============================================================
+
+Every scenario should have a structured object containing:
+
+scenario_name
+
+scenario_type
+
+EFC_per_day
+
+Avg_SOC_pct
+
+Avg_DoD_pct
+
+Mean_Tavg_C
+
+Max_Tmax_C
+
+Min_Tmin_C
+
+Cycles_per_day
+
+Charge_Duration_hr
+
+Discharge_Duration_hr
+
+C_rate
+
+EOL_year
+
+EOL_date
+
+Final_SOH_pct
+
+calendar_loss
+
+cycle_loss
+
+total_loss
+
+description
+
+Use this same structure throughout the UI.
+
+============================================================
+36. IMPORTANT SCIENTIFIC COMMUNICATION
+============================================================
+
+Do not overstate model predictions.
+
+The UI should clearly distinguish:
+
+Observed data
+Model estimate
+Forecast
+Scenario
+Uncertainty
+OEM reference
+
+When a result is a sensitivity scenario, label it as such.
+
+When uncertainty is not a formal confidence interval, explicitly say:
+
+"Parameter ensemble shown here is a local sensitivity/uncertainty analysis and is not a formal statistical confidence interval."
+
+============================================================
+37. PERFORMANCE
+============================================================
+
+Calibration and PINN training can be computationally expensive.
+
+Therefore:
+
+- show progress
+- cache appropriate intermediate results
+- don't retrain when unnecessary
+- provide "Run Forecast" buttons
+- provide "Recalibrate" only when data/config changes
+- prevent accidental duplicate execution
+
+============================================================
+38. TESTING
+============================================================
+
+After implementation create tests for:
+
+- file loading
+- column mapping
+- validation
+- scenario generation
+- Physics model wrapper
+- PINN wrapper
+- result schema
+- EOL calculation
+- report generation
+
+Also test the Streamlit application manually.
+
+============================================================
+39. README
+============================================================
+
+Create a detailed README explaining:
+
+- project architecture
+- installation
+- dependencies
+- how to run Streamlit
+- expected input files
+- supported columns
+- data mapping
+- Physics model
+- PINN model
+- forecasting workflow
+- best/middle/worst scenarios
+- outputs
+- troubleshooting
+
+Run command should be:
+
+streamlit run app.py
+
+============================================================
+40. DEVELOPMENT PROCESS
+============================================================
+
+DO NOT immediately start writing random frontend code.
+
+First:
+
+STEP 1:
+Inspect the entire existing repository.
+
+STEP 2:
+Locate and inspect the V11 notebook and existing backend code.
+
+STEP 3:
+Identify all existing functions and outputs.
+
+STEP 4:
+Create a mapping:
+
+Notebook Function
+→ Backend Module
+→ Streamlit Page
+→ UI Output
+
+STEP 5:
+Extract/reorganize reusable model functions.
+
+STEP 6:
+Create the backend result contracts.
+
+STEP 7:
+Build the data-upload and validation workflow.
+
+STEP 8:
+Build data visualization.
+
+STEP 9:
+Integrate OEM baseline.
+
+STEP 10:
+Integrate Physics forecasting.
+
+STEP 11:
+Implement PINN architecture/integration.
+
+STEP 12:
+Implement scenario analysis.
+
+STEP 13:
+Implement model comparison.
+
+STEP 14:
+Implement report generation.
+
+STEP 15:
+Test the complete workflow.
+
+============================================================
+41. FINAL ACCEPTANCE CRITERIA
+============================================================
+
+The project is complete only when a user can:
+
+1. Start Streamlit.
+2. Upload multiple field datasets.
+3. See all uploaded files.
+4. Validate them.
+5. Map columns if necessary.
+6. See data spread visualizations.
+7. Upload/select OEM baseline.
+8. See OEM visualization.
+9. Select Physics-Based or PINN-Based model.
+10. Run calibration/forecast.
+11. See historical model fit.
+12. See future SOH forecast.
+13. See predicted EOL.
+14. See best-case forecast.
+15. See middle-case forecast.
+16. See worst-case forecast.
+17. See operating-condition analysis.
+18. See model performance metrics.
+19. Compare Physics vs PINN.
+20. Inspect uncertainty.
+21. Inspect diagnostics.
+22. Download results.
+23. Generate final report.
+
+============================================================
+42. MOST IMPORTANT RULE
+============================================================
+
+The Streamlit frontend is a UI/orchestration layer around the BESS forecasting methodology.
+
+Do not create fake/demo outputs.
+
+Do not hardcode notebook outputs.
+
+Do not replace the V11 physics equations with arbitrary equations.
+
+Do not fabricate PINN performance.
+
+Do not claim scientific validation that has not been demonstrated.
+
+All numbers displayed in the UI must originate from:
+
+uploaded data
++
+actual backend calculations
++
+actual model outputs.
+
+If some required functionality is not currently implemented in the repository, create a clearly separated module/interface for it and document what remains to be implemented rather than silently pretending it works.
+
+============================================================
+43. EXPECTED DELIVERABLE
+============================================================
+
+Deliver a complete working Streamlit project with:
+
+- app.py
+- modular backend
+- modular UI/pages
+- reusable components
+- Physics model integration
+- PINN model integration/interface
+- multi-file upload
+- validation
+- visualization
+- OEM baseline
+- calibration
+- forecasting
+- scenario analysis
+- uncertainty
+- diagnostics
+- model comparison
+- report export
+- requirements.txt
+- README.md
+- tests
+
+The final UI should represent the workflow described above from beginning to end.
+
+Before finishing, run the application and verify the complete workflow using the supplied sample datasets.
