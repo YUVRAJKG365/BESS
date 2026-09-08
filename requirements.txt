@@ -6,4 +6,4 @@ plotly
 openpyxl
 xlrd
 requests
-scikit-learn
+sklearn
